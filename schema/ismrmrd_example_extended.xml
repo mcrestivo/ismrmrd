@@ -46,6 +46,10 @@
     <systemModel>Avanto</systemModel>
     <systemFieldStrength_T>1.494</systemFieldStrength_T>
     <relativeReceiverNoiseBandwidth>0.79</relativeReceiverNoiseBandwidth>
+    <compression>
+      <compressionAlgorithm>NHLBI</compressionAlgorithm>
+      <compressionTolerance>1e-5</compressionTolerance>
+    </compression>
     <receiverChannels>32</receiverChannels>
     <coilLabel>
       <coilNumber>0</coilNumber>
