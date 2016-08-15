@@ -48,7 +48,8 @@
     <relativeReceiverNoiseBandwidth>0.79</relativeReceiverNoiseBandwidth>
     <compression>
       <compressionAlgorithm>NHLBI</compressionAlgorithm>
-      <compressionTolerance>1e-5</compressionTolerance>
+      <compressionTolerance>0.25</compressionTolerance>
+      <compressionSigmaReference>1e-5</compressionSigmaReference>
     </compression>
     <receiverChannels>32</receiverChannels>
     <coilLabel>

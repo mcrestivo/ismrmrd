@@ -144,6 +144,7 @@ namespace ISMRMRD
   {
       std::string compressionAlgorithm;
       float compressionTolerance;
+      float compressionSigmaReference;
   };
 
   struct AcquisitionSystemInformation
