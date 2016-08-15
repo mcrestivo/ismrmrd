@@ -88,12 +88,20 @@
     </xs:sequence>
   </xs:complexType>
 
+  <xs:complexType name="compressionType">
+    <xs:all>
+      <xs:element name="compressionAlgorithm" type="xs:string" />
+      <xs:element name="compressionTolerance" type="xs:float" />
+    </xs:all>
+  </xs:complexType>
+
   <xs:complexType name="acquisitionSystemInformationType">
     <xs:sequence>
       <xs:element minOccurs="0" maxOccurs="1" name="systemVendor" type="xs:string"/>
       <xs:element minOccurs="0" maxOccurs="1" name="systemModel" type="xs:string"/>
       <xs:element minOccurs="0" maxOccurs="1" name="systemFieldStrength_T" type="xs:float"/>
       <xs:element minOccurs="0" maxOccurs="1" name="relativeReceiverNoiseBandwidth" type="xs:float"/>
+      <xs:element minOccurs="0" maxOccurs="1" name="compression" type="compressionType" />
       <xs:element minOccurs="0" maxOccurs="1" name="receiverChannels" type="xs:unsignedShort"/>
       <xs:element minOccurs="0" maxOccurs="unbounded" name="coilLabel" type="coilLabelType" />  
       <xs:element minOccurs="0" maxOccurs="1" name="institutionName" type="xs:string"/>

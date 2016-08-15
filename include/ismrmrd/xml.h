@@ -140,12 +140,19 @@ namespace ISMRMRD
     std::string coilName;
   };
   
+  struct Compression
+  {
+      std::string compressionAlgorithm;
+      float compressionTolerance;
+  };
+
   struct AcquisitionSystemInformation
   {
     Optional<std::string> systemVendor;
     Optional<std::string> systemModel;
     Optional<float> systemFieldStrength_T;
     Optional<float> relativeReceiverNoiseBandwidth;
+    Optional<Compression> compression;
     Optional<unsigned short> receiverChannels;
     std::vector<CoilLabel> coilLabel;
     Optional<std::string> institutionName;

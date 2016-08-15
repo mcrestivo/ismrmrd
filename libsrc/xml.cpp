@@ -379,6 +379,13 @@ namespace ISMRMRD
 	info.systemModel = parse_optional_string(acquisitionSystemInformation, "systemModel");
 	info.systemFieldStrength_T = parse_optional_float(acquisitionSystemInformation, "systemFieldStrength_T");
 	info.relativeReceiverNoiseBandwidth = parse_optional_float(acquisitionSystemInformation, "relativeReceiverNoiseBandwidth");
+        pugi::xml_node compression = acquisitionSystemInformation.child("compression");
+        if (compression) {
+            Compression c;
+            c.compressionAlgorithm = parse_string(compression, "compressionAlgorithm");
+            c.compressionTolerance = std::atof(compression.child_value("compressionTolerance"));
+            info.compression = c;
+        }
 	info.receiverChannels = parse_optional_ushort(acquisitionSystemInformation, "receiverChannels");
 	pugi::xml_node coilLabel = acquisitionSystemInformation.child("coilLabel");
 	while (coilLabel) {
@@ -610,6 +617,11 @@ namespace ISMRMRD
       append_optional_node(n1,"systemModel",h.acquisitionSystemInformation->systemModel);
       append_optional_node(n1,"systemFieldStrength_T",h.acquisitionSystemInformation->systemFieldStrength_T);
       append_optional_node(n1,"relativeReceiverNoiseBandwidth",h.acquisitionSystemInformation->relativeReceiverNoiseBandwidth);
+      if (h.acquisitionSystemInformation->compression) {
+          n2 = n1.append_child("compression");
+          append_node(n2,"compressionAlgorithm", h.acquisitionSystemInformation->compression->compressionAlgorithm);
+          append_node(n2,"compressionTolerance", h.acquisitionSystemInformation->compression->compressionTolerance);
+      }
       append_optional_node(n1,"receiverChannels",h.acquisitionSystemInformation->receiverChannels);
       for (size_t i = 0; i < h.acquisitionSystemInformation->coilLabel.size(); i++) {
 	n2 = n1.append_child();
