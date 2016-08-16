@@ -451,14 +451,14 @@ namespace ISMRMRD
   void to_string_val(const float& v, std::string& o)
   {
     char buffer[256];
-    sprintf(buffer,"%f",v);
+    sprintf(buffer,"%g",v);
     o = std::string(buffer);
   }
 
   void to_string_val(const double& v, std::string& o)
   {
     char buffer[256];
-    sprintf(buffer,"%f",v);
+    sprintf(buffer,"%g",v);
     o = std::string(buffer);
   }
 
