@@ -385,6 +385,7 @@ namespace ISMRMRD
             c.compressionAlgorithm = parse_string(compression, "compressionAlgorithm");
             c.compressionTolerance = std::atof(compression.child_value("compressionTolerance"));
             c.compressionSigmaReference = std::atof(compression.child_value("compressionSigmaReference"));
+            c.compressionDwellTimeReference_us = std::atof(compression.child_value("compressionDwellTimeReference_us"));
             info.compression = c;
         }
 	info.receiverChannels = parse_optional_ushort(acquisitionSystemInformation, "receiverChannels");
@@ -623,6 +624,7 @@ namespace ISMRMRD
           append_node(n2,"compressionAlgorithm", h.acquisitionSystemInformation->compression->compressionAlgorithm);
           append_node(n2,"compressionTolerance", h.acquisitionSystemInformation->compression->compressionTolerance);
           append_node(n2,"compressionSigmaReference", h.acquisitionSystemInformation->compression->compressionSigmaReference);
+          append_node(n2,"compressionDwellTimeReference_us", h.acquisitionSystemInformation->compression->compressionDwellTimeReference_us);
       }
       append_optional_node(n1,"receiverChannels",h.acquisitionSystemInformation->receiverChannels);
       for (size_t i = 0; i < h.acquisitionSystemInformation->coilLabel.size(); i++) {

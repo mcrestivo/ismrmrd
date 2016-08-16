@@ -50,6 +50,7 @@
       <compressionAlgorithm>NHLBI</compressionAlgorithm>
       <compressionTolerance>0.25</compressionTolerance>
       <compressionSigmaReference>1e-5</compressionSigmaReference>
+      <compressionDwellTimeReference_us>1.0</compressionDwellTimeReference_us>
     </compression>
     <receiverChannels>32</receiverChannels>
     <coilLabel>

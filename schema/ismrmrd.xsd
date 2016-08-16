@@ -93,6 +93,7 @@
       <xs:element name="compressionAlgorithm" type="xs:string" />
       <xs:element name="compressionTolerance" type="xs:float" />
       <xs:element name="compressionSigmaReference" type="xs:float" />
+      <xs:element name="compressionDwellTimeReference_us" type="xs:float" />
     </xs:all>
   </xs:complexType>
 
