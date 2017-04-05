@@ -157,7 +157,13 @@ typedef struct HDF5_Acquisition
     ISMRMRD_AcquisitionHeader head;
     hvl_t traj;
     hvl_t data;
+	hvl_t compressed_buffer; //MCR_4/4/17
 } HDF5_Acquisition;
+
+static hid_t get_hdf5type_char(void) {  ///MCR_4/4/17
+    hid_t datatype = H5Tcopy(H5T_NATIVE_CHAR);
+    return datatype;
+}
 
 static hid_t get_hdf5type_uint16(void) {
     hid_t datatype = H5Tcopy(H5T_NATIVE_UINT16);
@@ -316,6 +322,8 @@ static hid_t get_hdf5type_acquisitionheader(void) {
     vartype = H5Tarray_create2(H5T_NATIVE_FLOAT, 1, arraydims);
     h5status = H5Tinsert(datatype, "user_float", HOFFSET(ISMRMRD_AcquisitionHeader, user_float), vartype);
     H5Tclose(vartype);
+
+    h5status = H5Tinsert(datatype, "size_compressed_buffer", HOFFSET(ISMRMRD_AcquisitionHeader, size_compressed_buffer), H5T_NATIVE_UINT64); //MCR_4/4/17
     
     /* Clean up */
     if (h5status < 0) {
@@ -343,6 +351,13 @@ static hid_t get_hdf5type_acquisition(void) {
     vartype = get_hdf5type_float();
     vlvartype = H5Tvlen_create(vartype);
     h5status = H5Tinsert(datatype, "data", HOFFSET(HDF5_Acquisition, data), vlvartype);
+    H5Tclose(vartype);
+    H5Tclose(vlvartype);
+
+    /* Store acquisition data as an array of char */  ///MCR_4/4/17
+    vartype = get_hdf5type_char();
+    vlvartype = H5Tvlen_create(vartype);
+    h5status = H5Tinsert(datatype, "compressed_buffer", HOFFSET(HDF5_Acquisition, compressed_buffer), vlvartype);
     H5Tclose(vartype);
     H5Tclose(vlvartype);
     
@@ -577,6 +592,8 @@ static int append_element(const ISMRMRD_Dataset * dset, const char * path,
         /* TODO check that the header dataset's datatype is correct */
         dataspace = H5Dget_space(dataset);
         rank = H5Sget_simple_extent_ndims(dataspace);
+		//printf("%i\n",rank);
+		//printf("%i\n",ndim+1);
         if (rank != ndim + 1) {
             return ISMRMRD_PUSH_ERR(ISMRMRD_FILEERROR, "Dimensions are incorrect.");
         }
@@ -1109,8 +1126,19 @@ int ismrmrd_append_acquisition(const ISMRMRD_Dataset *dset, const ISMRMRD_Acquis
     hdf5acq[0].head = acq->head;
     hdf5acq[0].traj.len = acq->head.number_of_samples * acq->head.trajectory_dimensions;
     hdf5acq[0].traj.p = acq->traj;
-    hdf5acq[0].data.len = 2 * acq->head.number_of_samples * acq->head.active_channels;
-    hdf5acq[0].data.p = acq->data;
+	//printf("%zu \n", ismrmrd_size_of_acquisition_data(acq));
+	if(ismrmrd_size_of_acquisition_data(acq) > 0){
+		hdf5acq[0].compressed_buffer.len = 0;
+    	hdf5acq[0].data.len = 2 * acq->head.number_of_samples * acq->head.active_channels;
+		hdf5acq[0].data.p = acq->data;
+	}
+	else{
+		//printf("%zu \n", acq->head.size_compressed_buffer);
+		hdf5acq[0].data.len = 0;
+		hdf5acq[0].compressed_buffer.len = acq->head.size_compressed_buffer;
+		hdf5acq[0].compressed_buffer.p = acq->compressed_buffer;
+	}
+
 
     /* Write it */
     status = append_element(dset, path, hdf5acq, datatype, 0, NULL);
@@ -1152,14 +1180,21 @@ int ismrmrd_read_acquisition(const ISMRMRD_Dataset *dset, uint32_t index, ISMRMR
 
     status = read_element(dset, path, &hdf5acq, datatype, index);
     memcpy(&acq->head, &hdf5acq.head, sizeof(ISMRMRD_AcquisitionHeader));
+	if(!ismrmrd_is_flag_set(acq->head.flags,ISMRMRD_ACQ_COMPRESSION2)){
+		acq->head.size_compressed_buffer = 0;
+	} 
     ismrmrd_make_consistent_acquisition(acq);
     memcpy(acq->traj, hdf5acq.traj.p, ismrmrd_size_of_acquisition_traj(acq));
     memcpy(acq->data, hdf5acq.data.p, ismrmrd_size_of_acquisition_data(acq));
+	if(ismrmrd_is_flag_set(acq->head.flags,ISMRMRD_ACQ_COMPRESSION2)){
+		memcpy(acq->compressed_buffer, hdf5acq.compressed_buffer.p, ismrmrd_size_of_acquisition_comp_buffer(acq));
+	}
 
     /* clean up */
     free(path);
     free(hdf5acq.traj.p);
     free(hdf5acq.data.p);
+	free(hdf5acq.compressed_buffer.p);
 
     status = H5Tclose(datatype);
     if (status < 0) {

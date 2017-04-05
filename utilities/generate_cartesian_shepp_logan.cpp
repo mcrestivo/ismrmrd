@@ -39,6 +39,8 @@ int main(int argc, char** argv)
 	float noise_level;
 	std::string outfile;
 	std::string dataset;
+	std::string meas_id;
+	std::string meas_depend_id;
 	bool store_coordinates = false;
 	bool noise_calibration = false;
 
@@ -55,6 +57,8 @@ int main(int argc, char** argv)
 	    ("dataset,d", po::value<std::string>(&dataset)->default_value("dataset"), "Output Dataset Name")
 	    ("noise-calibration,C", po::value<bool>(&noise_calibration)->zero_tokens(), "Add noise calibration")
 	    ("k-coordinates,k",  po::value<bool>(&store_coordinates)->zero_tokens(), "Store k-space coordinates")
+		("meas_depend_id,D", po::value<std::string>(&meas_depend_id)->default_value("0001"), "Measurement Dependency ID")
+		("meas_id,I", po::value<std::string>(&meas_id)->default_value("0002"), "Measurement ID")
 	;
 
 	po::variables_map vm;
@@ -104,6 +108,7 @@ int main(int argc, char** argv)
             acq.sample_time_us() = 5.0;
             d.appendAcquisition(acq);
 	}
+	else{
         
         if (store_coordinates) {
             acq.resize(readout, ncoils, 2);
@@ -153,6 +158,7 @@ int main(int argc, char** argv)
                     d.appendAcquisition(acq);
                 }
             }
+		}
 	}
 
 	//Let's create a header, we will use the C++ classes in ismrmrd/xml.h
@@ -196,6 +202,16 @@ int main(int argc, char** argv)
 	h.encoding.push_back(e);
 
 	//Add any additional fields that you may want would go here....
+	MeasurementInformation MeasInfo;
+	MeasurementDependency MeasDepend;
+	MeasInfo.measurementID = meas_id;
+	MeasInfo.patientPosition = "HFS";
+	if(!noise_calibration){
+		MeasDepend.dependencyType = "Noise";
+		MeasDepend.measurementID = meas_depend_id;
+		MeasInfo.measurementDependency.push_back(MeasDepend);
+	}
+	h.measurementInformation = MeasInfo;
 
 	//Serialize the header
         std::stringstream str;
