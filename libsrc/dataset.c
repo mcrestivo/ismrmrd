@@ -11,7 +11,6 @@
 #endif /* __cplusplus */
 
 #include <hdf5.h>
-#include <ismrmrd/waveform.h>
 #include "ismrmrd/dataset.h"
 
 #ifdef __cplusplus
@@ -158,6 +157,7 @@ typedef struct HDF5_Acquisiton
     ISMRMRD_AcquisitionHeader head;
     hvl_t traj;
     hvl_t data;
+	hvl_t compressed_buffer; //MCR_4/4/17
 } HDF5_Acquisition;
 
 typedef struct HDF5_Waveform
@@ -325,6 +325,8 @@ static hid_t get_hdf5type_acquisitionheader(void) {
     vartype = H5Tarray_create2(H5T_NATIVE_FLOAT, 1, arraydims);
     h5status = H5Tinsert(datatype, "user_float", HOFFSET(ISMRMRD_AcquisitionHeader, user_float), vartype);
     H5Tclose(vartype);
+
+    h5status = H5Tinsert(datatype, "size_compressed_buffer", HOFFSET(ISMRMRD_AcquisitionHeader, size_compressed_buffer), H5T_NATIVE_UINT64); //MCR_4/4/17
     
     /* Clean up */
     if (h5status < 0) {
@@ -352,6 +354,13 @@ static hid_t get_hdf5type_acquisition(void) {
     vartype = get_hdf5type_float();
     vlvartype = H5Tvlen_create(vartype);
     h5status = H5Tinsert(datatype, "data", HOFFSET(HDF5_Acquisition, data), vlvartype);
+    H5Tclose(vartype);
+    H5Tclose(vlvartype);
+
+    /* Store acquisition data as an array of char */  ///MCR_4/4/17
+    vartype = get_hdf5type_char();
+    vlvartype = H5Tvlen_create(vartype);
+    h5status = H5Tinsert(datatype, "compressed_buffer", HOFFSET(HDF5_Acquisition, compressed_buffer), vlvartype);
     H5Tclose(vartype);
     H5Tclose(vlvartype);
     
@@ -637,6 +646,7 @@ static int append_element(const ISMRMRD_Dataset * dset, const char * path,
         /* TODO check that the header dataset's datatype is correct */
         dataspace = H5Dget_space(dataset);
         rank = H5Sget_simple_extent_ndims(dataspace);
+
         if (rank != ndim + 1) {
             return ISMRMRD_PUSH_ERR(ISMRMRD_FILEERROR, "Dimensions are incorrect.");
         }

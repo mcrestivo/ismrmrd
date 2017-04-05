@@ -48,7 +48,6 @@ int ismrmrd_init_acquisition_header(ISMRMRD_AcquisitionHeader *hdr) {
     hdr->number_of_samples = 0;
     hdr->available_channels = 1;
     hdr->active_channels = 1;
-	hdr->size_compressed_buffer = 0; //MCR_4/4/17
     return ISMRMRD_NOERROR;
 }
 
@@ -59,7 +58,6 @@ int ismrmrd_init_acquisition(ISMRMRD_Acquisition *acq) {
     ismrmrd_init_acquisition_header(&acq->head);
     acq->traj = NULL;
     acq->data = NULL;
-	acq->compressed_buffer = NULL; //MCR_4/4/17
     return ISMRMRD_NOERROR;
 }
 
@@ -72,8 +70,6 @@ int ismrmrd_cleanup_acquisition(ISMRMRD_Acquisition *acq) {
     acq->data = NULL;
     free(acq->traj);
     acq->traj = NULL;
-	free(acq->compressed_buffer); //MCR_4/4/17
-    acq->compressed_buffer = NULL; //MCR_4/4/17
     return ISMRMRD_NOERROR;
 }
     
@@ -120,13 +116,12 @@ int ismrmrd_copy_acquisition(ISMRMRD_Acquisition *acqdest, const ISMRMRD_Acquisi
     /* Copy the trajectory and the data */
     memcpy(acqdest->traj, acqsource->traj, ismrmrd_size_of_acquisition_traj(acqsource));
     memcpy(acqdest->data, acqsource->data, ismrmrd_size_of_acquisition_data(acqsource));
-	memcpy(acqdest->compressed_buffer, acqsource->compressed_buffer, ismrmrd_size_of_acquisition_comp_buffer(acqsource));
     return ISMRMRD_NOERROR;
 }
 
 int ismrmrd_make_consistent_acquisition(ISMRMRD_Acquisition *acq) {
 
-    size_t traj_size, data_size, comp_size;
+    size_t traj_size, data_size;
         
     if (acq==NULL) {
         return ISMRMRD_PUSH_ERR(ISMRMRD_RUNTIMEERROR, "Pointer should not NULL.");
@@ -147,7 +142,6 @@ int ismrmrd_make_consistent_acquisition(ISMRMRD_Acquisition *acq) {
     }
         
     data_size = ismrmrd_size_of_acquisition_data(acq);
-	//printf("%zu\n",ismrmrd_size_of_acquisition_data(acq));
     if (data_size > 0) {
         complex_float_t *newPtr = (complex_float_t *)realloc(acq->data, data_size);
         if (newPtr == NULL) {
@@ -156,18 +150,7 @@ int ismrmrd_make_consistent_acquisition(ISMRMRD_Acquisition *acq) {
         }
         acq->data = newPtr;
     }
-////////////////////////////////////////////////////////////////MCR_4/4/17
-    comp_size = ismrmrd_size_of_acquisition_comp_buffer(acq);
-	//printf("%zu\n",ismrmrd_size_of_acquisition_comp_buffer(acq));
-    if (comp_size > 0) {
-        char *newPtr = (char *)realloc(acq->compressed_buffer, comp_size);
-        if (newPtr == NULL) {
-            return ISMRMRD_PUSH_ERR(ISMRMRD_MEMORYERROR,
-                          "Failed to realloc acquisition compressed buffer array");
-        }
-        acq->compressed_buffer = newPtr;
-    }
-////////////////////////////////////////////////////////////////
+
     return ISMRMRD_NOERROR;
 }
 
@@ -187,10 +170,6 @@ size_t ismrmrd_size_of_acquisition_traj(const ISMRMRD_Acquisition *acq) {
 
 size_t ismrmrd_size_of_acquisition_data(const ISMRMRD_Acquisition *acq) {
     int num_data;
-
-	if(ismrmrd_is_flag_set(acq->head.flags,ISMRMRD_ACQ_COMPRESSION2)){  //MCR_4/4/17
-		return 0;
-	}
     
     if (acq==NULL) {
         ISMRMRD_PUSH_ERR(ISMRMRD_RUNTIMEERROR, "Pointer should not NULL.");
@@ -201,24 +180,6 @@ size_t ismrmrd_size_of_acquisition_data(const ISMRMRD_Acquisition *acq) {
     return num_data * sizeof(*acq->data);
 
 }
-
-///////////////////////////////////////////////////////////////////MCR_4/4/17
-size_t ismrmrd_size_of_acquisition_comp_buffer(const ISMRMRD_Acquisition *acq) {
-
-	/*if(!ismrmrd_is_flag_set(acq->head.flags,ISMRMRD_ACQ_COMPRESSION2)){
-		return 0;
-	}*/
-    
-    if (acq==NULL) {
-        ISMRMRD_PUSH_ERR(ISMRMRD_RUNTIMEERROR, "Pointer should not NULL.");
-        return 0;
-    }
-
-    return acq->head.size_compressed_buffer * sizeof(*acq->compressed_buffer);
-
-}
-////////////////////////////////////////////////////////////////////
-
 
 /* Image functions */
 int ismrmrd_init_image_header(ISMRMRD_ImageHeader *hdr) {

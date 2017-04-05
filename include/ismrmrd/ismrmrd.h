@@ -246,7 +246,6 @@ typedef struct ISMRMRD_AcquisitionHeader {
     ISMRMRD_EncodingCounters idx;                        /**< Encoding loop counters, see above */
     int32_t user_int[ISMRMRD_USER_INTS];                 /**< Free user parameters */
     float user_float[ISMRMRD_USER_FLOATS];               /**< Free user parameters */
-	uint64_t size_compressed_buffer; //MCR_4/4/17
 } ISMRMRD_AcquisitionHeader;
 
 /**
@@ -261,7 +260,6 @@ typedef struct ISMRMRD_Acquisition {
     ISMRMRD_AcquisitionHeader head; /**< Header, see above */
     float *traj;
     complex_float_t *data;
-	char *compressed_buffer; //MCR_4/4/17
 } ISMRMRD_Acquisition;
 
 /** @addtogroup capi
@@ -275,7 +273,6 @@ EXPORTISMRMRD int ismrmrd_copy_acquisition(ISMRMRD_Acquisition *acqdest, const I
 EXPORTISMRMRD int ismrmrd_make_consistent_acquisition(ISMRMRD_Acquisition *acq);
 EXPORTISMRMRD size_t ismrmrd_size_of_acquisition_traj(const ISMRMRD_Acquisition *acq);
 EXPORTISMRMRD size_t ismrmrd_size_of_acquisition_data(const ISMRMRD_Acquisition *acq);
-EXPORTISMRMRD size_t ismrmrd_size_of_acquisition_comp_buffer(const ISMRMRD_Acquisition *acq);
 /** @} */
 
 /**********/
@@ -592,18 +589,6 @@ public:
      * Returns an iterator to the end of the trajectories
      */
     float * traj_end() const;
-
-////////////////////////////////////////////////////MCR_4/4/17  
-    /**
-     * Returns a pointer to the compressed data
-     */
-    const char * getCompBufferPtr() const;
-    char * getCompBufferPtr();
-    /**
-     * Sets the compressed buffer.  Must set sizes properly first
-     */    
-    void setCompBuffer(char * comp_data, uint64_t num_compressed_bytes);
-//////////////////////////////////////////////////////
 
     // Flag methods
     bool isFlagSet(const uint64_t val);

@@ -239,9 +239,6 @@ void Acquisition::resize(uint16_t num_samples, uint16_t active_channels, uint16_
        acq.head.number_of_samples = num_samples;
        acq.head.active_channels = active_channels;
        acq.head.trajectory_dimensions = trajectory_dimensions;
-	   if(!isFlagSet(ISMRMRD_ACQ_COMPRESSION2)){  //MCR_4/4/17
-	   		acq.head.size_compressed_buffer = 0;
-	   }
        if (ismrmrd_make_consistent_acquisition(&acq) != ISMRMRD_NOERROR) {
            throw std::runtime_error(build_exception_string());
        }
@@ -296,23 +293,6 @@ float * Acquisition::traj_begin() const {
 float * Acquisition::traj_end() const {
        return acq.traj+size_t(acq.head.number_of_samples)*size_t(acq.head.trajectory_dimensions);
 }
-
-/////////////////////////////////////MCR_4/4/17
-const char * Acquisition::getCompBufferPtr() const {
-    return acq.compressed_buffer;
-}
-
-char * Acquisition::getCompBufferPtr() {
-    return acq.compressed_buffer;
-}
-
-void Acquisition::setCompBuffer(char * comp_data, uint64_t num_compressed_bytes ) {
-	acq.head.size_compressed_buffer = num_compressed_bytes;
-	this->setFlag(ISMRMRD_ACQ_COMPRESSION2);
-	ismrmrd_make_consistent_acquisition(&acq);
-	memcpy(acq.compressed_buffer,comp_data,num_compressed_bytes);
-}
-///////////////////////////////////////////
 
 // Flag methods
 bool Acquisition::isFlagSet(const uint64_t val) {
