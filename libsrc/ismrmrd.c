@@ -169,15 +169,20 @@ size_t ismrmrd_size_of_acquisition_traj(const ISMRMRD_Acquisition *acq) {
 }
 
 size_t ismrmrd_size_of_acquisition_data(const ISMRMRD_Acquisition *acq) {
-    int num_data;
+    size_t num_data;
     
     if (acq==NULL) {
         ISMRMRD_PUSH_ERR(ISMRMRD_RUNTIMEERROR, "Pointer should not NULL.");
         return 0;
     }
-
-    num_data = acq->head.number_of_samples * acq->head.active_channels;
-    return num_data * sizeof(*acq->data);
+	if(ismrmrd_is_flag_set(acq->head.flags, ISMRMRD_ACQ_COMPRESSION2)){
+		memcpy(&num_data, acq->data, sizeof(size_t));
+		return num_data;
+	}
+	else{
+    	num_data = acq->head.number_of_samples * acq->head.active_channels;
+    	return num_data * sizeof(*acq->data);
+	}
 
 }
 

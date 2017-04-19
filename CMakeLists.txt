@@ -106,15 +106,13 @@ endif()
 
 
 # Find HDF5 for dataset support
-find_package(HDF5 COMPONENTS C)
+find_package(HDF5 1.8 COMPONENTS C)
 
 if (HDF5_FOUND)
     set (ISMRMRD_DATASET_SUPPORT true)
     set (ISMRMRD_DATASET_SOURCES libsrc/dataset.c libsrc/dataset.cpp)
-    set (ISMRMRD_DATASET_INCLUDE_DIR ${HDF5_INCLUDE_DIRS})
+    set (ISMRMRD_DATASET_INCLUDE_DIR ${HDF5_C_INCLUDE_DIR})
     set (ISMRMRD_DATASET_LIBRARIES ${HDF5_LIBRARIES})
-    add_definitions(${HDF5_DEFINITIONS})
-	include_directories(${HDF5_INCLUDE_DIRS})
 else ()
     set (ISMRMRD_DATASET_SUPPORT false)
     message (WARNING "HDF5 not found. Dataset and file support unavailable!")

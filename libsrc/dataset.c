@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #endif /* __cplusplus */
 
 #include <hdf5.h>
@@ -152,12 +153,11 @@ static int delete_var(const ISMRMRD_Dataset *dset, const char *var) {
 /*********************************************/
 /* Private (Static) Functions for HDF5 Types */
 /*********************************************/
-typedef struct HDF5_Acquisiton
+typedef struct HDF5_Acquisition
 {
     ISMRMRD_AcquisitionHeader head;
     hvl_t traj;
     hvl_t data;
-	hvl_t compressed_buffer; //MCR_4/4/17
 } HDF5_Acquisition;
 
 typedef struct HDF5_Waveform
@@ -267,8 +267,6 @@ static hid_t get_hdf5type_encoding(void) {
     return datatype;
 }
 
-
-
 static hid_t get_hdf5type_acquisitionheader(void) {
     hid_t datatype;
     herr_t h5status;
@@ -325,8 +323,6 @@ static hid_t get_hdf5type_acquisitionheader(void) {
     vartype = H5Tarray_create2(H5T_NATIVE_FLOAT, 1, arraydims);
     h5status = H5Tinsert(datatype, "user_float", HOFFSET(ISMRMRD_AcquisitionHeader, user_float), vartype);
     H5Tclose(vartype);
-
-    h5status = H5Tinsert(datatype, "size_compressed_buffer", HOFFSET(ISMRMRD_AcquisitionHeader, size_compressed_buffer), H5T_NATIVE_UINT64); //MCR_4/4/17
     
     /* Clean up */
     if (h5status < 0) {
@@ -354,13 +350,6 @@ static hid_t get_hdf5type_acquisition(void) {
     vartype = get_hdf5type_float();
     vlvartype = H5Tvlen_create(vartype);
     h5status = H5Tinsert(datatype, "data", HOFFSET(HDF5_Acquisition, data), vlvartype);
-    H5Tclose(vartype);
-    H5Tclose(vlvartype);
-
-    /* Store acquisition data as an array of char */  ///MCR_4/4/17
-    vartype = get_hdf5type_char();
-    vlvartype = H5Tvlen_create(vartype);
-    h5status = H5Tinsert(datatype, "compressed_buffer", HOFFSET(HDF5_Acquisition, compressed_buffer), vlvartype);
     H5Tclose(vartype);
     H5Tclose(vlvartype);
     
@@ -646,7 +635,6 @@ static int append_element(const ISMRMRD_Dataset * dset, const char * path,
         /* TODO check that the header dataset's datatype is correct */
         dataspace = H5Dget_space(dataset);
         rank = H5Sget_simple_extent_ndims(dataspace);
-
         if (rank != ndim + 1) {
             return ISMRMRD_PUSH_ERR(ISMRMRD_FILEERROR, "Dimensions are incorrect.");
         }
@@ -727,12 +715,6 @@ static int append_element(const ISMRMRD_Dataset * dset, const char * path,
     offset[0] = hdfdims[0]-1;
     filespace = H5Dget_space(dataset);
     h5status  = H5Sselect_hyperslab (filespace, H5S_SELECT_SET, offset, NULL, ext_dims, NULL);
-	
-	if (h5status < 0) {
-	
-		H5Ewalk2(H5E_DEFAULT, H5E_WALK_UPWARD, walk_hdf5_errors, NULL);
-		return ISMRMRD_PUSH_ERR(ISMRMRD_HDF5ERROR, "Failed to select hyperslab");
-	}
     memspace = H5Screate_simple(rank, ext_dims, NULL);
 
     free(hdfdims);
@@ -1185,8 +1167,8 @@ int ismrmrd_append_acquisition(const ISMRMRD_Dataset *dset, const ISMRMRD_Acquis
     hdf5acq[0].head = acq->head;
     hdf5acq[0].traj.len = acq->head.number_of_samples * acq->head.trajectory_dimensions;
     hdf5acq[0].traj.p = acq->traj;
-    hdf5acq[0].data.len = 2 * acq->head.number_of_samples * acq->head.active_channels;
-    hdf5acq[0].data.p = acq->data;
+    hdf5acq[0].data.len = ceil(ismrmrd_size_of_acquisition_data(acq)/sizeof(float));
+	hdf5acq[0].data.p = acq->data;
 
     /* Write it */
     status = append_element(dset, path, hdf5acq, datatype, 0, NULL);
@@ -1228,6 +1210,8 @@ int ismrmrd_read_acquisition(const ISMRMRD_Dataset *dset, uint32_t index, ISMRMR
 
     status = read_element(dset, path, &hdf5acq, datatype, index);
     memcpy(&acq->head, &hdf5acq.head, sizeof(ISMRMRD_AcquisitionHeader));
+	acq->data = realloc(acq->data,sizeof(size_t));
+	memcpy(acq->data, hdf5acq.data.p, sizeof(size_t));
     ismrmrd_make_consistent_acquisition(acq);
     memcpy(acq->traj, hdf5acq.traj.p, ismrmrd_size_of_acquisition_traj(acq));
     memcpy(acq->data, hdf5acq.data.p, ismrmrd_size_of_acquisition_data(acq));
