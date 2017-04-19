@@ -152,6 +152,7 @@ public:
     void readHeader(std::string& xmlstring);
     // Acquisitions
     void appendAcquisition(const Acquisition &acq);
+	void appendAcquisitionCompressed(Acquisition &acq, float local_tolerance);
     void readAcquisition(uint32_t index, Acquisition &acq);
     uint32_t getNumberOfAcquisitions();
     // Images

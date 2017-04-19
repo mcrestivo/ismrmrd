@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #endif /* __cplusplus */
 
 #include <hdf5.h>
@@ -1108,9 +1109,9 @@ int ismrmrd_append_acquisition(const ISMRMRD_Dataset *dset, const ISMRMRD_Acquis
     /* Create the HDF5 version of the acquisition */
     hdf5acq[0].head = acq->head;
     hdf5acq[0].traj.len = acq->head.number_of_samples * acq->head.trajectory_dimensions;
-    hdf5acq[0].traj.p = acq->traj;z
-    hdf5acq[0].data.len = 2 * acq->head.number_of_samples * acq->head.active_channels;
-    hdf5acq[0].data.p = acq->data;
+    hdf5acq[0].traj.p = acq->traj;
+    hdf5acq[0].data.len = ceil(ismrmrd_size_of_acquisition_data(acq)/sizeof(float));
+	hdf5acq[0].data.p = acq->data;
 
     /* Write it */
     status = append_element(dset, path, hdf5acq, datatype, 0, NULL);
@@ -1152,6 +1153,8 @@ int ismrmrd_read_acquisition(const ISMRMRD_Dataset *dset, uint32_t index, ISMRMR
 
     status = read_element(dset, path, &hdf5acq, datatype, index);
     memcpy(&acq->head, &hdf5acq.head, sizeof(ISMRMRD_AcquisitionHeader));
+	acq->data = realloc(acq->data,sizeof(size_t));
+	memcpy(acq->data, hdf5acq.data.p, sizeof(size_t));
     ismrmrd_make_consistent_acquisition(acq);
     memcpy(acq->traj, hdf5acq.traj.p, ismrmrd_size_of_acquisition_traj(acq));
     memcpy(acq->data, hdf5acq.data.p, ismrmrd_size_of_acquisition_data(acq));

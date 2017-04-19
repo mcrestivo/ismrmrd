@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdexcept>
+#include "ismrmrd/NHLBICompression.h"
 
 namespace ISMRMRD {
 //
@@ -56,7 +57,34 @@ void Dataset::readHeader(std::string& xmlstring){
 
 // Acquisitions
 void Dataset::appendAcquisition(const Acquisition &acq)
+{	
+    int status = ismrmrd_append_acquisition(&dset_, reinterpret_cast<const ISMRMRD_Acquisition*>(&acq));
+    if (status != ISMRMRD_NOERROR) {
+        throw std::runtime_error(build_exception_string());
+    }
+}
+
+void Dataset::appendAcquisitionCompressed(Acquisition &acq, float local_tolerance)
 {
+	std::vector<uint8_t> serialized_buffer;
+	int segments = acq.getHead().active_channels*4;
+	//int segments = 1;			
+	int segment_size = acq.getHead().active_channels*acq.getHead().number_of_samples*2/segments;
+	if (acq.getHead().active_channels*acq.getHead().number_of_samples*2%segments) {
+    	throw std::runtime_error(build_exception_string());
+	}
+	for(int ch = 0; ch < segments; ch ++){
+        std::vector<float> input_data((float*)&acq.getDataPtr()[0]+ch*segment_size, (float*)&acq.getDataPtr()[0]+(ch+1)*segment_size);
+        CompressedBuffer<float> comp_buffer(input_data, local_tolerance);
+		std::vector<uint8_t> serialized = comp_buffer.serialize();
+		if(ch == 0){serialized_buffer = serialized;}
+		else{serialized_buffer.insert(serialized_buffer.end(), serialized.begin(), serialized.end());}
+	}
+	size_t buffer_size = serialized_buffer.size()+sizeof(size_t)+1;
+	memcpy(acq.getDataPtr(), &buffer_size, sizeof(size_t)); //bufer size is in bytes
+	memcpy((size_t*)&acq.getDataPtr()[0]+1, &serialized_buffer[0], serialized_buffer.size());
+	acq.setFlag(ISMRMRD_ACQ_COMPRESSION2);
+
     int status = ismrmrd_append_acquisition(&dset_, reinterpret_cast<const ISMRMRD_Acquisition*>(&acq));
     if (status != ISMRMRD_NOERROR) {
         throw std::runtime_error(build_exception_string());
@@ -68,8 +96,37 @@ void Dataset::readAcquisition(uint32_t index, Acquisition & acq) {
     if (status != ISMRMRD_NOERROR) {
         throw std::runtime_error(build_exception_string());
     }
-}
+	if(acq.isFlagSet(ISMRMRD_ACQ_COMPRESSION2)){
+		size_t buffer_size = ismrmrd_size_of_acquisition_data(reinterpret_cast<const ISMRMRD_Acquisition*>(&acq));
 
+		std::vector<uint8_t> serialized(buffer_size,0);
+		memcpy(&serialized[0],&acq.getDataPtr()[0],buffer_size);
+		acq.clearFlag(ISMRMRD_ACQ_COMPRESSION2);
+		ismrmrd_make_consistent_acquisition(reinterpret_cast<ISMRMRD_Acquisition*>(&acq));
+		serialized.erase(serialized.begin(),serialized.begin()+sizeof(size_t));
+
+		float *d_ptr = (float*) acq.getDataPtr();
+		size_t bytes_needed = 0;
+		size_t total_size = 0;
+		CompressedBuffer<float> comp;
+
+		bytes_needed = comp.deserialize(serialized);
+		serialized.erase(serialized.begin(),serialized.begin()+bytes_needed);
+        for (size_t i = 0; i < comp.size(); i++) {
+            d_ptr[i] = comp[i]; //This uncompresses sample by sample into the uncompressed array
+        }
+		total_size += comp.size();
+		while(total_size < size_t(2*acq.getHead().number_of_samples*acq.getHead().active_channels)){
+            CompressedBuffer<float> comp;
+            bytes_needed = comp.deserialize(serialized);
+			serialized.erase(serialized.begin(),serialized.begin()+bytes_needed);
+            for (size_t i = 0; i < comp.size(); i++) {
+                d_ptr[i+total_size] = comp[i]; //This uncompresses sample by sample into the uncompressed array
+            }
+			total_size += comp.size();
+		}
+	}
+}
 
 uint32_t Dataset::getNumberOfAcquisitions()
 {
