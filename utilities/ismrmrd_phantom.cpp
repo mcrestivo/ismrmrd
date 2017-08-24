@@ -124,10 +124,9 @@ int add_noise(NDArray<complex_float_t> & a, float sd)
 
 int add_noise(Acquisition& a, float sd)
 {
-
-    boost::normal_distribution<float> nd(0.0, sd);
-    boost::variate_generator<boost::mt19937&,
-                             boost::normal_distribution<float> > var_nor(get_noise_seed(), nd);
+		boost::normal_distribution<float> nd(0.0, sd);
+		boost::variate_generator<boost::mt19937&,
+		                         boost::normal_distribution<float> > var_nor(get_noise_seed(), nd);
 
     for (uint16_t c=0; c<a.active_channels(); c++) {
         for (uint16_t s=0; s<a.number_of_samples(); s++) {
